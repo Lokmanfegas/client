@@ -19,7 +19,14 @@ const Stack = createNativeStackNavigator();
 const App = () => {
   const [cartItems, setCartItems] = useState([]);
   return (
-    <Profile/>
+    <CartProvider>
+      <Stack.Navigator initialRouteName="Menu">
+      <Stack.Screen name="Menu" component={MenuScreen} options={{headerShown: false}}  />
+
+      <Stack.Screen name="Description" component={DescriptionScreen} options={{headerShown: false}}/>
+    </Stack.Navigator>
+
+    </CartProvider>
     
   );
 };
