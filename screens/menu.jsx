@@ -126,7 +126,6 @@ useEffect(() => {
   </ScrollView>
 
      
-            
 
 
 
@@ -266,3 +265,4 @@ const styles = StyleSheet.create({
 });
 
 export default MenuScreen;
+
