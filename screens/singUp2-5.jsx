@@ -1,46 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, FlatList, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Api_maladie from '../api_maladie';
+import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
+import Api_categorie from '../api_categorie';
 
-const SignUp2 = () => {
+const SignUp2_5 = () => {
     const { params } = useRoute();
-    const [selectedMaladies, setSelectedMaladies] = useState([]);
-    const [maladies, setMaladies] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const navigation = useNavigation();
 
     useEffect(() => {
-        const fetchMaladies = async () => {
+        const fetchCategories = async () => {
             try {
-                const maladie = await Api_maladie.getMaladies();
-                setMaladies(maladie.data.maladies);
+                const response = await Api_categorie.getCategories();
+                setCategories(response.data.categories || []);
             } catch (error) {
                 Alert.alert('Erreur', error.message);
             }
         };
-        fetchMaladies();
+        fetchCategories();
     }, []);
 
-    const toggleMaladie = (maladie) => {
-        setSelectedMaladies(prev => 
-            prev.some(m => m.id_maladie === maladie.id_maladie) 
-                ? prev.filter(m => m.id_maladie !== maladie.id_maladie) 
-                : [...prev, maladie]
+    const toggleCategory = (category) => {
+        setSelectedCategories(prev => 
+            prev.includes(category) 
+                ? prev.filter(c => c !== category) 
+                : [...prev, category]
         );
     };
 
     const handleNext = () => {
-        navigation.navigate('SignUp2_5', { 
-            formData: params.formData,
-            maladies: selectedMaladies.map(m => m.id_maladie)
-        });
-    };
-
-    const handleSkip = () => {
-        navigation.navigate('SignUp2_5', { 
-            formData: params.formData,
-            maladies: []
+        navigation.navigate('SignUp3', { 
+            ...params,
+            categorie: selectedCategories
         });
     };
 
@@ -50,31 +44,31 @@ const SignUp2 = () => {
                 {/* Header and progress bar */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Image source={require('../assets/fleche_gauche.png')} style={styles.backIcon} />
+                        <Ionicons name="arrow-back" size={24} color="black" />
                     </TouchableOpacity>
                     <View style={styles.progressContainer}>
                         <View style={styles.progressBar}>
-                            <View style={[styles.progressFilled, { width: '50%' }]} />
+                            <View style={[styles.progressFilled, { width: '83%' }]} />
                         </View>
-                        <Text style={styles.stepText}>Step 2/4</Text>
+                        <Text style={styles.stepText}>Step 3/4</Text>
                     </View>
                 </View>
 
-                {/* Health issues section */}
-                <View style={styles.healthContainer}>
-                    <View style={styles.healthHeader}>
-                        <Image source={require('../assets/health_issues.png')} style={styles.healthIcon} />
-                        <Text style={styles.healthTitle}>Health issues</Text>
+                {/* Food categories section */}
+                <View style={styles.foodContainer}>
+                    <View style={styles.foodHeader}>
+                        <MaterialIcons name="fastfood" size={30} color="#4CAF50" />
+                        <Text style={styles.foodTitle}>Food Preferences</Text>
                     </View>
-                    <Text style={styles.healthSubtitle}>Select your health issues (optional):</Text>
+                    <Text style={styles.foodSubtitle}>Select your favorite food categories (optional):</Text>
                     
-                    {/* Selected maladies */}
-                    {selectedMaladies.length > 0 && (
+                    {/* Selected categories */}
+                    {selectedCategories.length > 0 && (
                         <View style={styles.selectedContainer}>
-                            {selectedMaladies.map(maladie => (
-                                <View key={maladie.id_maladie} style={styles.selectedItem}>
-                                    <Text style={styles.selectedText}>{maladie.nom_maladie}</Text>
-                                    <TouchableOpacity onPress={() => toggleMaladie(maladie)}>
+                            {selectedCategories.map(category => (
+                                <View key={category} style={styles.selectedItem}>
+                                    <Text style={styles.selectedText}>{category}</Text>
+                                    <TouchableOpacity onPress={() => toggleCategory(category)}>
                                         <Text style={styles.removeText}>×</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -82,18 +76,18 @@ const SignUp2 = () => {
                         </View>
                     )}
 
-                    {/* Dropdown to add more maladies */}
+                    {/* Dropdown to add more categories */}
                     <TouchableOpacity 
                         style={styles.dropdown}
                         onPress={() => setModalVisible(true)}
                     >
                         <Text style={styles.dropdownText}>
-                            {selectedMaladies.length > 0 ? 'Add more health issues' : 'Select health issues'}
+                            {selectedCategories.length > 0 ? 'Add more categories' : 'Select food categories'}
                         </Text>
-                        <Image source={require('../assets/fleche_health_issues.png')} style={styles.dropdownIcon} />
+                        <Ionicons name="chevron-down" size={16} color="black" />
                     </TouchableOpacity>
 
-                    {/* Modal for selecting maladies */}
+                    {/* Modal for selecting categories */}
                     <Modal
                         animationType="slide"
                         transparent={true}
@@ -103,19 +97,19 @@ const SignUp2 = () => {
                         <View style={styles.modalContainer}>
                             <View style={styles.modalContent}>
                                 <FlatList
-                                    data={maladies}
-                                    keyExtractor={(item) => item.id_maladie.toString()}
+                                    data={categories}
+                                    keyExtractor={(item) => item.nom_categorie}
                                     renderItem={({ item }) => (
                                         <TouchableOpacity 
                                             style={styles.modalItem}
                                             onPress={() => {
-                                                toggleMaladie(item);
+                                                toggleCategory(item.nom_categorie);
                                                 setModalVisible(false);
                                             }}
                                         >
-                                            <Text style={styles.modalItemText}>{item.nom_maladie}</Text>
-                                            {selectedMaladies.some(m => m.id_maladie === item.id_maladie) && (
-                                                <Text style={styles.checkIcon}>✓</Text>
+                                            <Text style={styles.modalItemText}>{item.nom_categorie}</Text>
+                                            {selectedCategories.includes(item.nom_categorie) && (
+                                                <FontAwesome name="check" size={16} color="#4CAF50" />
                                             )}
                                         </TouchableOpacity>
                                     )}
@@ -126,15 +120,13 @@ const SignUp2 = () => {
                 </View>
             </ScrollView>
 
-            {/* Next and Skip buttons */}
+            {/* Next button */}
             <View style={styles.bottomContainer}>
                 <TouchableOpacity 
-                    style={[styles.button, selectedMaladies.length === 0 && styles.skipButton]} 
-                    onPress={selectedMaladies.length > 0 ? handleNext : handleSkip}
+                    style={styles.button} 
+                    onPress={handleNext}
                 >
-                    <Text style={styles.buttonText}>
-                        {selectedMaladies.length > 0 ? 'Next' : 'Skip'}
-                    </Text>
+                    <Text style={styles.buttonText}>Next</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -142,10 +134,6 @@ const SignUp2 = () => {
 };
 
 const styles = StyleSheet.create({
-  
-    skipButton: {
-        backgroundColor: '#CCCCCC',
-    },
     container: {
         flex: 1,
         backgroundColor: '#FFFFFF',
@@ -162,10 +150,6 @@ const styles = StyleSheet.create({
     },
     backButton: {
         padding: 10,
-    },
-    backIcon: {
-        width: 20,
-        height: 20,
     },
     progressContainer: {
         flex: 1,
@@ -187,26 +171,22 @@ const styles = StyleSheet.create({
         marginTop: 5,
         fontSize: 12,
     },
-    healthContainer: {
+    foodContainer: {
         alignItems: 'center',
         marginTop: 20,
         marginBottom: 40,
     },
-    healthHeader: {
+    foodHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 10,
     },
-    healthIcon: {
-        width: 30,
-        height: 30,
-        marginRight: 10,
-    },
-    healthTitle: {
+    foodTitle: {
         fontSize: 24,
         fontWeight: 'bold',
+        marginLeft: 10,
     },
-    healthSubtitle: {
+    foodSubtitle: {
         fontSize: 16,
         color: '#666666',
         marginBottom: 30,
@@ -246,10 +226,6 @@ const styles = StyleSheet.create({
     dropdownText: {
         fontSize: 16,
     },
-    dropdownIcon: {
-        width: 10,
-        height: 5,
-    },
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -274,10 +250,6 @@ const styles = StyleSheet.create({
     modalItemText: {
         fontSize: 16,
     },
-    checkIcon: {
-        color: '#4CAF50',
-        fontWeight: 'bold',
-    },
     bottomContainer: {
         position: 'absolute',
         bottom: 20,
@@ -297,9 +269,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
     },
-    buttonDisabled: {
-        backgroundColor: '#CCCCCC',
-    },
     buttonText: {
         color: '#FFFFFF',
         fontWeight: 'bold',
@@ -307,4 +276,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default SignUp2;
+export default SignUp2_5;

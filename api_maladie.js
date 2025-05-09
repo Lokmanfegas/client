@@ -60,6 +60,59 @@ const Api_maladie = {
             }
           throw error;
         }
+      },
+      linkClientMaladie : async (id_client, id_maladie) => {
+        try {
+          const body = {
+            id_client,
+            id_maladie,
+          };
+      
+          const response = await axios.post(`${API_URL}/clientmaladie`, body);
+      
+          if (response.status === 201) {
+            return response.data; 
+          }
+        } catch (error) {
+      
+          if (error.response) {
+            if (error.response.status === 400) {
+              console.error("Erreur : Missing fields: id_client and id_maladie are required.");
+            } else {
+              console.error("Erreur serveur :", error.response.data.message);
+            }
+          }
+          
+        }
+      },
+      deleteClientMaladie : async (id_client, id_maladie) => {
+        try {
+      
+          const url = `${API_URL}/clientmaladie/${id_client}`;
+      
+          const body = {
+            id_maladie,
+          };
+      
+      
+          const response = await axios.delete(url,{ data: body });
+      
+      
+          if (response.status === 204) {
+            console.log("Maladie supprimée avec succès.");
+          }
+        } catch (error) {
+      
+          if (error.response) {
+            if (error.response.status === 404) {
+              console.error("Erreur : Maladie not found or could not be deleted.");
+              throw new Error("Maladie not found or could not be deleted");
+            } else {
+              console.error("Erreur serveur :", error.response.data.message);
+              throw new Error("Erreur serveur");
+            }
+          }
+        }
       }
     
 
@@ -71,3 +124,5 @@ const Api_maladie = {
 
 
 export default Api_maladie;
+
+

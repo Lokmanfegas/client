@@ -1,145 +1,147 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Pressable, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Pressable, ScrollView, Alert , KeyboardAvoidingView,Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+
 const SignUp1 = () => {
-  const [name, setName] = useState('');
-  const [surname, setSurname] = useState('');
-  const [email, setEmail] = useState('');
-  const [age, setAge] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isChecked, setIsChecked] = useState(false);
-  
-  const navigation = useNavigation();
+    const [formData, setFormData] = useState({
+        nom: '',
+        prenom: '',
+        email: '',
+        age: '',
+        password: '',
+        passwordConfirm: '',
+        num: '',
+        adressmaison: ''
+    });
+    const [isChecked, setIsChecked] = useState(false);
+    const navigation = useNavigation();
 
-  const handleNext = () => {
-    // Validation logic can be added here
-    navigation.navigate('SignUp2');
-  };
+    const handleChange = (name, value) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-  const goBack = () => {
-    navigation.goBack();
-  };
+    const validateForm = () => {
+        if (!formData.nom || !formData.prenom || !formData.email || !formData.age || 
+            !formData.password || !formData.passwordConfirm || !formData.num || !formData.adressmaison) {
+            Alert.alert('Erreur', 'Tous les champs sont obligatoires');
+            return false;
+        }
+        if (formData.password !== formData.passwordConfirm) {
+            Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+            return false;
+        }
+        if (formData.password.length < 8) {
+            Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
+            return false;
+        }
+        if (!isChecked) {
+            Alert.alert('Erreur', 'Vous devez accepter la politique de confidentialité');
+            return false;
+        }
+        return true;
+    };
 
-  const handleSignIn = () => {
-    // Le bouton est cliquable mais ne fait aucune navigation
-    console.log('Sign in pressed');
-  };
+    const handleNext = async () => {
+        if (!validateForm()) return;
+        navigation.navigate('SignUp2', { formData });
+    };
 
-  return (
-    <ScrollView style={styles.scrollView}>
-      <View style={styles.container}>
-        {/* Header with back button and progress indicator */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
-            <Image source={require('../assets/fleche_gauche.png')} style={styles.backIcon} />
-          </TouchableOpacity>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={styles.progressFilled} />
-            </View>
-            <Text style={styles.stepText}>Step 1/3</Text>
+    return (
+      <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+  >
+      <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+      >
+          <View style={styles.container}>
+              {/* Header and progress bar */}
+              <View style={styles.header}>
+                  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                      <Image source={require('../assets/fleche_gauche.png')} style={styles.backIcon} />
+                  </TouchableOpacity>
+                  <View style={styles.progressContainer}>
+                      <View style={styles.progressBar}>
+                          <View style={[styles.progressFilled, { width: '20%' }]} />
+                      </View>
+                      <Text style={styles.stepText}>Step 1/4</Text>
+                  </View>
+              </View>
+
+              {/* Form inputs */}
+              <View style={styles.formContainer}>
+                  <View style={styles.avatarContainer}>
+                      <Image source={require('../assets/Los_Pollos_Hermanos_logo.png')} style={styles.avatar} />
+                      <Text style={styles.title}>Create an account</Text>
+                  </View>
+
+                  {Object.entries({
+                      nom: 'Nom',
+                      prenom: 'Prénom',
+                      email: 'Email',
+                      age: 'Age',
+                      num: 'Numéro de téléphone',
+                      adressmaison: 'Adresse',
+                      password: 'Password',
+                      passwordConfirm: 'Confirm Password'
+                  }).map(([key, placeholder]) => (
+                      <TextInput
+                          key={key}
+                          placeholder={placeholder}
+                          placeholderTextColor="#666"
+                          style={styles.input}
+                          value={formData[key]}
+                          onChangeText={(text) => handleChange(key, text)}
+                          secureTextEntry={key.includes('password')}
+                          keyboardType={
+                              key === 'email' ? 'email-address' : 
+                              key === 'age' || key === 'num' ? 'numeric' : 'default'
+                          }
+                      />
+                  ))}
+              </View>
+
+              {/* Checkbox and button */}
+              <View style={styles.checkboxContainer}>
+                  <Pressable
+                      style={[styles.checkbox, isChecked && styles.checkedBox]}
+                      onPress={() => setIsChecked(!isChecked)}>
+                      {isChecked && <Text style={styles.checkmark}>✓</Text>}
+                  </Pressable>
+                  <Text style={styles.privacyText}>
+                      I Agree to <Text style={styles.privacyLink}>Privacy Policy</Text>
+                  </Text>
+              </View>
+
+              <TouchableOpacity style={styles.button} onPress={handleNext}>
+                  <Text style={styles.buttonText}>Next</Text>
+              </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Avatar and title */}
-        <View style={styles.avatarContainer}>
-          <Image source={require('../assets/foodie_logo.png')} style={styles.avatar} />
-          <Text style={styles.title}>Create an account</Text>
-        </View>
-
-        {/* Form inputs */}
-        <TextInput 
-          placeholder="Name" 
-          style={styles.input} 
-          value={name}
-          onChangeText={setName}
-        />
-        
-        <TextInput 
-          placeholder="Surname" 
-          style={styles.input} 
-          value={surname}
-          onChangeText={setSurname}
-        />
-        
-        <TextInput 
-          placeholder="Email" 
-          style={styles.input} 
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        
-        <TextInput 
-          placeholder="Age" 
-          style={styles.input} 
-          keyboardType="numeric"
-          value={age}
-          onChangeText={setAge}
-        />
-        
-        <TextInput 
-          placeholder="Password" 
-          style={styles.input} 
-          secureTextEntry 
-          value={password}
-          onChangeText={setPassword}
-        />
-        
-        {password.length > 0 && password.length < 8 && (
-          <Text style={styles.errorText}>Password must be at least 8 characters long</Text>
-        )}
-        
-        <TextInput 
-          placeholder="Confirm password" 
-          style={styles.input} 
-          secureTextEntry
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
-      
-        {/* Privacy policy checkbox */}
-        <View style={styles.checkboxContainer}>
-          <Pressable
-            style={[styles.checkbox, isChecked && styles.checkedBox]}
-            onPress={() => setIsChecked(!isChecked)}>
-            {isChecked && <Text style={styles.checkmark}>✓</Text>}
-          </Pressable>
-          <Text style={styles.privacyText}>
-            I Agree to <Text style={styles.privacyLink}>Privacy Policy</Text>
-          </Text>
-        </View>
-
-        {/* Next button */}
-        <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <Text style={styles.buttonText}>Next</Text>
-        </TouchableOpacity>
-
-        {/* Sign in link */}
-        <View style={styles.signInContainer}>
-          <Text style={styles.signInText}>Already have an account? </Text>
-          <TouchableOpacity onPress={handleSignIn}>
-            <Text style={styles.signInLink}>Sign in</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
-  );
+      </ScrollView>
+  </KeyboardAvoidingView>
+    );
 };
-
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  container: {
+},
+scrollContent: {
+    paddingBottom: 20, // Ajoutez un padding en bas pour éviter que le bouton ne soit caché
+},
+container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     padding: 20,
-  },
+},
+formContainer: {
+    width: '100%',
+},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,4 +260,5 @@ const styles = StyleSheet.create({
   },
 });
 
+// Styles remain the same as in your original file
 export default SignUp1;

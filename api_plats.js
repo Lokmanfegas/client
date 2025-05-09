@@ -62,11 +62,39 @@ const Api_plat = {
           }
           throw error;
         }
+      },
+      submitPlatNote : async (id_client, id_plat, nb_etoile, avis) => {
+        try {
+       
+          const body = {
+            id_client: Number(id_client),
+            id_plat: Number(id_plat),
+            nb_etoile: Number(nb_etoile),
+            avis: avis || 'Aucun commentaire',
+          };
+      
+          const response = await axios.post(`${API_URL}/noteplat`, body);
+      
+          if (response.status === 201) {
+            return response.data; 
+          }
+        } catch (error) {
+      
+          if (error.response) {
+            if (error.response.status === 400) {
+              console.error("Erreur : Champs manquants.");
+              throw new Error("Champs manquants.");
+            } else {
+              console.error("Erreur serveur :", error.response.data.message || "Erreur inconnue.");
+              throw new Error(error.response.data.message || "Erreur serveur");
+            }
+          }
+        }
       }
 
 
 }
 
-
+ 
 
 export default Api_plat;

@@ -1,14 +1,143 @@
-import React, {useState, useRef, useEffect} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated, Easing, Modal} from 'react-native';
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from 'react-native-responsive-screen';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  Animated, 
+  Easing,
+  Dimensions
+} from 'react-native';
+import { 
+  FontAwesome, 
+  MaterialCommunityIcons,
+  MaterialIcons
+} from '@expo/vector-icons';
+import Api_maladie from '../api_maladie';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { CartContext } from '../CartContext';
+import Api_plat from '../api_plats';
+
+const { width, height } = Dimensions.get('window');
+const wp = (size) => (width / 100) * size;
+const hp = (size) => (height / 100) * size;
 
 const DescriptionScreen = () => {
-  const [incr, setincr] = useState(1);
+  const [ingredients_plat, setIngredients] = useState([]);
+  const { cartItems, setCartItems } = useContext(CartContext);
+  const [clientId, setClientId] = useState(null);
+  const [incr, setIncr] = useState(1);
   const [showAlert, setShowAlert] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   const slideAnim = useRef(new Animated.Value(hp('100%'))).current;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { item } = route.params;
+
+  // Couleur et icône dynamiques selon la catégorie
+  const getCategoryColor = () => {
+    switch(item.categorie_plat.toLowerCase()) {
+      case 'salad': return '#4CAF50';
+      case 'meat': return '#F44336';
+      case 'pasta': return '#FF9800';
+      case 'dessert': return '#9C27B0';
+      case 'drink': return '#2196F3';
+      default: return '#8B0000';
+    }
+  };
+
+  const getCategoryIcon = () => {
+    switch(item.categorie_plat.toLowerCase()) {
+      case 'salad': return 'food-apple';
+      case 'meat': return 'food-steak';
+      case 'pasta': return 'food-variant';
+      case 'dessert': return 'cupcake';
+      case 'drink': return 'glass-cocktail';
+      case 'sandwich': return 'sandwich';
+      default: return 'food';
+    }
+  };
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const id = await AsyncStorage.getItem('clientId');
+        if (id) setClientId(parseInt(id));
+      } catch (error) {
+        console.error('Error checking login status:', error);
+      }
+    };
+    checkLoginStatus();
+  }, []);
+
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        const ingredients_res = await Api_plat.getIngredients();
+        const plat_ingredients_res = await Api_plat.getIngredientsByPlat(item.id_plat);
+        
+        const ingredientNames = ingredients_res.data.ingredients
+          .filter(ing => plat_ingredients_res.data.ingredients.some(pi => pi.id_ingredient === ing.id_ingedient))
+          .map(ing => ing.nom_igredient);
+        
+        setIngredients(ingredientNames);
+      } catch (error) {
+        console.error('Error fetching ingredients:', error);
+      }
+    };
+    fetchIngredients();
+  }, []);
+
+  const fetchMaladies = async (id_plat) => {
+    try {
+      const maladieclient = await Api_maladie.getClientMaladies(clientId);
+      const maladiesplat = await Api_maladie.getMaladiesByPlat(id_plat);
+      
+      const alerts = maladieclient.data.maladies.filter(mc => 
+        maladiesplat.data.maladies.some(mp => mp.id_maladie === mc.id_maladie)
+      );
+      
+      if (alerts.length > 0) {
+        alert("Attention : Ce plat contient des ingrédients auxquels vous êtes allergique");
+      }
+    } catch (error) {
+      console.error('Error fetching allergies:', error);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!clientId) return;
+    
+    try {
+      if (isFavorite) {
+        await Api_plat_pref.deleteFavoritePlat(clientId, item.id_plat);
+      } else {
+        await Api_plat_pref.addFavoritePlat(item.id_plat, clientId);
+      }
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
+  const addToCart = () => {
+    fetchMaladies(item.id_plat);
+    showCartAlert();
+    
+    const existingItemIndex = cartItems.findIndex(cartItem => cartItem.id_plat === item.id_plat);
+    const newItem = { id_plat: item.id_plat, quantite: incr };
+    
+    setCartItems(existingItemIndex !== -1 
+      ? cartItems.map((item, idx) => 
+          idx === existingItemIndex 
+            ? { ...item, quantite: item.quantite + incr } 
+            : item
+        )
+      : [...cartItems, newItem]
+    );
+  };
 
   const showCartAlert = () => {
     setShowAlert(true);
@@ -29,447 +158,423 @@ const DescriptionScreen = () => {
     }).start(() => setShowAlert(false));
   };
 
- 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-   
+        {/* Header avec boutons */}
         <View style={styles.header}>
-         <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.backButton}> 
-           <Image source={require('../assets/fleche_gauche.png')} style={styles.headerIcon} />
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <MaterialIcons name="arrow-back" size={wp(6)} color="#FFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.heartButton}> 
-           <Image source={require('../assets/coeur.png')} style={styles.headerIcon} />
+          
+          <TouchableOpacity 
+            style={styles.favoriteButton}
+            onPress={toggleFavorite}
+          >
+            <FontAwesome 
+              name={isFavorite ? 'heart' : 'heart-o'} 
+              size={wp(6)} 
+              color={isFavorite ? '#FF3B30' : '#FFF'} 
+            />
           </TouchableOpacity>
+        </View>
+
+        {/* Section icône du plat */}
+        <View style={[styles.iconContainer, { backgroundColor: getCategoryColor() + '20' }]}>
+          <MaterialCommunityIcons 
+            name={getCategoryIcon()} 
+            size={wp(30)} 
+            color={getCategoryColor()} 
+          />
+        </View>
+
+        {/* Titre et prix */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>{item.nom_plat}</Text>
+          <Text style={[styles.price, { color: getCategoryColor() }]}>{item.Prix_plat} DA</Text>
+        </View>
+
+        {/* Badges d'info */}
+        <View style={styles.badgeContainer}>
+          <View style={styles.ratingBadge}>
+            <FontAwesome name="star" size={wp(4)} color="#FFC107" />
+            <Text style={styles.ratingText}>{item.note_plat}</Text>
+          </View>
+          
+          <View style={styles.calorieBadge}>
+            <MaterialCommunityIcons name="fire" size={wp(4)} color="#FFD747" />
+            <Text style={styles.calorieText}>{item.info_calorie}</Text>
           </View>
         </View>
 
-   
-        <View style={styles.imageSection}>
-          <Image source={require('../assets/salad.png')} style={styles.foodImage} />
-          <Text style={styles.foodTitle}>{item.nom_plat}</Text>
-
-          <View style={styles.priceQuantityContainer}>
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceText}>{item.Prix_plat}</Text>
-            </View>
-           
-            <View style={styles.quantityContainer}>
-              <TouchableOpacity onPress={() => setincr(incr + 1)}>
-                <Image source={require('../assets/plus.png')} style={styles.quantityIcon} />
-              </TouchableOpacity>
-              <Text style={styles.quantityText}>{incr}</Text>
-              <TouchableOpacity onPress={() => { if (incr > 1) setincr(incr - 1) }}>
-                <Image source={require('../assets/moin.png')} style={styles.quantityIcon} />
-              </TouchableOpacity>
-            </View>
-              
-            <View style={styles.cartContainer}>
-              <TouchableOpacity onPress={showCartAlert}>
-                <Image source={require('../assets/panier.png')} style={styles.cartIcon} />
-              </TouchableOpacity>
-            </View> 
+        {/* Contrôle de quantité */}
+        <View style={styles.quantityContainer}>
+          <Text style={styles.quantityLabel}>Quantity:</Text>
+          
+          <View style={styles.quantityControls}>
+            <TouchableOpacity 
+              onPress={() => setIncr(Math.max(1, incr - 1))}
+              style={styles.quantityButton}
+            >
+              <MaterialIcons name="remove" size={wp(5)} color="#555" />
+            </TouchableOpacity>
+            
+            <Text style={styles.quantityValue}>{incr}</Text>
+            
+            <TouchableOpacity 
+              onPress={() => setIncr(incr + 1)}
+              style={styles.quantityButton}
+            >
+              <MaterialIcons name="add" size={wp(5)} color="#555" />
+            </TouchableOpacity>
           </View>
+          
+          <TouchableOpacity 
+            onPress={addToCart}
+            style={[styles.addButton, { backgroundColor: getCategoryColor() }]}
+          >
+            <Text style={styles.addButtonText}>Add to Cart</Text>
+            <FontAwesome name="shopping-cart" size={wp(4.5)} color="#FFF" />
+          </TouchableOpacity>
         </View>
 
-        {/* Reviews and Calories */}
+        {/* Section ingrédients */}
         <View style={styles.section}>
-          <View style={styles.reviewsContainer}>
-          <View style={styles.reviewItem}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
-            <View style={styles.ratingText}>
-                <Image source={require('../assets/star.png')} style={styles.ratingIcon} />
-                <Text style={styles.ratingValue}>{item.note_plat}</Text>
-             </View>
-             </View>
-             <View style={styles.calorieItem}>
-            <Text style={styles.sectionTitle}>Calories</Text>
-            <View style={styles.NEWText}>
-              <Image source={require('../assets/fire.png')} style={styles.calorieIcon} />
-              <Text style={styles.calorieValue}>{item.info_calorie}</Text>
-            </View>
-            </View>
+          <Text style={styles.sectionTitle}>Ingredients</Text>
+          <View style={styles.ingredientsGrid}>
+            {ingredients_plat.map((ingredient, index) => (
+              <View key={index} style={styles.ingredientItem}>
+                <MaterialCommunityIcons 
+                  name="checkbox-marked-circle" 
+                  size={wp(4)} 
+                  color={getCategoryColor()} 
+                />
+                <Text style={styles.ingredientText}>{ingredient}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* Ingredients */}
+        {/* Section description */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Ingredients</Text>
-          <View style={styles.ingredientsContainer}>
-
-            {
-              ingredients_plat.map((ingredient, index) => (
-                <Text key={index} style={styles.ingredientItem}>{ingredient}, </Text>
-              ))
-            }
-          </View>
+          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.descriptionText}>{item.Description_plat}</Text>
         </View>
-
-        {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Description</Text>
-          <Text style={styles.descriptionText}>
-            {item.Description_plat}
-          </Text>
-        </View>
+       
       </ScrollView>
 
-      {/* Alert Modal */}
-      <Modal
-        transparent={true}
-        visible={showAlert}
-        onRequestClose={hideAlert}
-        animationType="none"
-      >
+      {/* Alerte d'ajout au panier (remplace le Modal) */}
+      {showAlert && (
         <TouchableOpacity 
           style={styles.modalOverlay} 
           activeOpacity={1}
           onPress={hideAlert}
         >
-          <Animated.View 
-            style={[
-              styles.alertContainer,
-              { transform: [{ translateY: slideAnim }] }
-            ]}
-          >
-            <Image source={require('../assets/valide.png')} style={styles.alertIcon} />
-            <View style={styles.alertContent}>
-               <Text style={styles.alertTitle}>Item added to Chart!</Text>
-               <Text style={styles.alertText}>
-                {incr} {item.nom_plat} {incr > 1 ? 'have' : 'has'} been added to your cart,
-                check the selected items by checking your chart to validate your order
-              </Text>
+        <View style={styles.alertContainer}>
+        <View style={[styles.alertIconContainer, { backgroundColor: getCategoryColor() + '20' }]}>
+              <MaterialCommunityIcons 
+                name={getCategoryIcon()} 
+                size={wp(15)} 
+                color={getCategoryColor()} 
+              />
             </View>
             
-            <TouchableOpacity 
-              onPress={hideAlert}
-              style={styles.alertButton1}
-            >
-              <Text style={styles.alertButtonText1}>go to chart</Text>
-            </TouchableOpacity>
+            <Text style={styles.alertTitle}>Added to Cart!</Text>
+            <Text style={styles.alertText}>
+              {incr} {item.nom_plat} {incr > 1 ? 'have' : 'has'} been added to your cart
+            </Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                onPress={() => {
+                  hideAlert();
+                  navigation.navigate('Mycart');
+                }}
+                style={[styles.alertButton, { backgroundColor: getCategoryColor() }]}
+              >
+                <Text style={styles.alertButtonText}>View Cart</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={hideAlert}
+                style={styles.alertSecondaryButton}
+              >
+                <Text style={[styles.alertButtonText, { color: getCategoryColor() }]}>
+                  Continue
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity 
-              onPress={hideAlert}
-              style={styles.alertButton}
-            >
-              <Text style={styles.alertButtonText}>Continue shopping</Text>
-            </TouchableOpacity>
-          </Animated.View>
+        </View>
         </TouchableOpacity>
-      </Modal>
-
-      {/* Navigation Bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem}>
-          <Image source={require('../assets/homeV.png')} style={styles.navIcon} />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Image source={require('../assets/mylist.png')} style={styles.navIcon} />
-          <Text style={styles.navText}>My List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItemM}>
-          <Image source={require('../assets/home.png')} style={styles.navIconM} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Image source={require('../assets/orders.png')} style={styles.navIcon} />
-          <Text style={styles.navText}>Orders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Image source={require('../assets/profile.png')} style={styles.navIcon} />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 };
+/*
+ <View style={[styles.alertIconContainer, { backgroundColor: getCategoryColor() + '20' }]}>
+              <MaterialCommunityIcons 
+                name={getCategoryIcon()} 
+                size={wp(15)} 
+                color={getCategoryColor()} 
+              />
+            </View>
+            
+            <Text style={styles.alertTitle}>Added to Cart!</Text>
+            <Text style={styles.alertText}>
+              {incr} {item.nom_plat} {incr > 1 ? 'have' : 'has'} been added to your cart
+            </Text>
+            
+            <View style={styles.alertButtons}>
+              <TouchableOpacity 
+                onPress={() => {
+                  hideAlert();
+                  navigation.navigate('Mycart');
+                }}
+                style={[styles.alertButton, { backgroundColor: getCategoryColor() }]}
+              >
+                <Text style={styles.alertButtonText}>View Cart</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={hideAlert}
+                style={styles.alertSecondaryButton}
+              >
+                <Text style={[styles.alertButtonText, { color: getCategoryColor() }]}>
+                  Continue
+                </Text>
+              </TouchableOpacity>
+            </View>
 
+*/
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
   },
   content: {
-    paddingBottom: hp('12%'),
+    paddingBottom: hp(5),
   },
   header: {
-    borderBottomLeftRadius: wp('40%'),
-    borderBottomRightRadius: wp('40%'),
-    backgroundColor: '#B02522',
-    paddingVertical: hp('15%'),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: wp('108%'),
-    paddingHorizontal: wp('10%'),
-    marginTop: hp('-10%'),
+    paddingHorizontal: wp(5),
+    paddingTop: hp(5),
+    paddingBottom: hp(2),
+    backgroundColor: '#8B0000',
+    borderBottomLeftRadius: wp(8),
+    borderBottomRightRadius: wp(8),
+    height: hp(15),
   },
   backButton: {
-    marginLeft: wp('-10%'),
-    marginTop:hp('-8%')
+    padding: wp(2),
+    marginLeft: wp(-2),
   },
-  heartButton: {
-    marginLeft: wp('-10%'),
-    marginTop:hp('-8%'),
+  favoriteButton: {
+    padding: wp(2),
+    marginRight: wp(-2),
   },
-  headerIcon: {
-    width: wp('6%'),
-    height: wp('6%'),
-  },
-  imageSection: {
-    
+  iconContainer: {
+    alignSelf: 'center',
+    width: wp(50),
+    height: wp(50),
+    borderRadius: wp(25),
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: hp('-20%'),
-    marginLeft:wp('-3%')
+    marginTop: hp(7),
+    marginBottom: hp(2),
   },
-  foodImage: {
-    width: wp('70%'),
-    height: hp('40%'),
-    resizeMode: 'contain',
-    marginLeft: wp('5%'),
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: wp(5),
+    marginBottom: hp(2),
   },
-  foodTitle: {
-    fontFamily: 'SF-Pro-Display-Bold',
-    fontWeight: '700',
-    fontSize: wp('8%'),
+  title: {
+    fontSize: wp(6),
+    fontWeight: 'bold',
     color: '#082953',
-    marginTop: hp('1%'),
-    marginLeft: wp('5%'),
+    flex: 1,
   },
-  priceQuantityContainer: {
+  price: {
+    fontSize: wp(6),
+    fontWeight: 'bold',
+    marginLeft: wp(2),
+  },
+  badgeContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: hp('2%'),
-    marginLeft: wp('10%'),
+    marginBottom: hp(3),
   },
-  priceContainer: {
-    borderRadius: wp('4%'),
-    backgroundColor: '#F4F5F6',
-    paddingHorizontal: wp('4%'),
-    paddingVertical: hp('1%'),
-    marginRight: wp('4%'),
-  },
-  quantityContainer: {
-    flexDirection: 'row',
-    borderRadius: wp('4%'),
-    backgroundColor: '#F4F5F6',
-    paddingHorizontal: wp('4%'),
-    paddingVertical: hp('1%'),
-    alignItems: 'center',
-  },
-  quantityText: {
-    marginHorizontal: wp('2%'),
-    fontSize: wp('4%'),
-  },
-  quantityIcon: {
-    tintColor:'black',
-    width: wp('3%'),
-    height: wp('3%'),
-  },
-  cartContainer: {
-    marginLeft: wp('10%'),
-    backgroundColor: '#FFC01D',
-    height: hp('6%'),
-    width: wp('12%'),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: wp('2%'),
-  },
-  cartIcon: {
-    width: wp('6%'),
-    height: wp('6%'),
-  },
-  section: {
-    paddingHorizontal: wp('5%'),
-    paddingVertical: hp('2%'),
-  },
-  sectionHeader: {
-    fontSize: wp('5%'),
-    fontWeight: 'bold',
-    marginBottom: hp('1.5%'),
-  },
-  sectionTitle: {
-    fontSize: wp('5%'),
-    fontWeight: 'bold',
-    color: '#9FA4AA',
-    marginBottom: hp('1%'),
-  },
-  priceText:{
-    marginTop:hp('0.7%'),
-   color:'#437F40'
-  },
-  reviewsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: hp('2%'),
-  },
-  reviewItem: {
-    alignItems: 'center',
-  },
-  calorieItem: {
-    alignItems: 'center',
-  },
-  ratingText: {
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFE9B2',
-    borderRadius: wp('2%'),
-    paddingHorizontal: wp('2%'),
-    paddingVertical: hp('0.5%'),
-    marginTop: hp('0.5%'),
+    borderRadius: wp(3),
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
+    marginRight: wp(3),
   },
-  NEWText: {
+  calorieBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#B02522',
-    borderRadius: wp('2%'),
-    paddingHorizontal: wp('2%'),
-    paddingVertical: hp('0.5%'),
-    marginTop: hp('0.5%'),
+    borderRadius: wp(3),
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
   },
-  ratingIcon: {
-    width: wp('3%'),
-    height: wp('3%'),
-    marginRight: wp('1%'),
-  },
-  calorieIcon: {
-    width: wp('3%'),
-    height: wp('3%'),
-    marginRight: wp('1%'),
-  },
-  ratingValue: {
+  ratingText: {
     color: '#FFC107',
-    fontSize: wp('3%'),
+    fontSize: wp(4),
+    fontWeight: '600',
+    marginLeft: wp(1),
   },
-  calorieValue: {
+  calorieText: {
     color: '#FFD747',
-    fontSize: wp('3%'),
-    fontFamily: 'Poppins-Medium',
+    fontSize: wp(4),
+    fontWeight: '600',
+    marginLeft: wp(1),
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp(5),
+    marginBottom: hp(4),
+  },
+  quantityLabel: {
+    fontSize: wp(4),
+    color: '#555',
     fontWeight: '500',
   },
-  ingredientsContainer: {
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F5F6',
+    borderRadius: wp(2),
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.5),
+  },
+  quantityButton: {
+    padding: wp(2),
+  },
+  quantityValue: {
+    fontSize: wp(4.5),
+    fontWeight: 'bold',
+    marginHorizontal: wp(3),
+    color: '#082953',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: wp(3),
+    paddingHorizontal: wp(5),
+    paddingVertical: hp(1.5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  addButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: wp(4),
+    marginRight: wp(2),
+  },
+  section: {
+    paddingHorizontal: wp(5),
+    marginBottom: hp(3),
+  },
+  sectionTitle: {
+    fontSize: wp(5),
+    fontWeight: 'bold',
+    color: '#082953',
+    marginBottom: hp(1.5),
+  },
+  ingredientsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginTop: hp(1),
   },
   ingredientItem: {
-    fontSize: wp('4%'),
-    color: '#9FA4AA',
-    marginRight: wp('2%'),
-    marginBottom: hp('0.5%'),
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '50%',
+    marginBottom: hp(1.5),
+  },
+  ingredientText: {
+    fontSize: wp(4),
+    color: '#555',
+    marginLeft: wp(2),
   },
   descriptionText: {
-    color: '#9FA4AA',
-    fontFamily: 'Poppins-Medium',
-    fontWeight: '500',
-    fontSize: wp('4%'),
-    lineHeight: hp('2.5%'),
-  },
-  navBar: {
-    height: hp('10%'),
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#F4F5F6',
-    position: 'absolute',
-    bottom: 0,
-    width: wp('100%'),
-    paddingHorizontal: wp('5%'),
-  },
-  navItem: {
-    alignItems: 'center',
-    width: wp('15%'),
-  },
-  navIcon: {
-    width: wp('6%'),
-    height: wp('6%'),
-    marginBottom: hp('0.5%'),
-  },
-  navItemM: {
-    backgroundColor: '#FFC01D',
-    borderRadius: wp('50%'),
-    width: wp('20%'),
-    height: wp('20%'),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: hp('-5%'),
-  },
-  navIconM: {
-    width: wp('10%'),
-    height: wp('10%'),
-  },
-  navText: {
-    color: '#555',
-    fontSize: wp('3%'),
+    fontSize: wp(4),
+    color: '#666',
+    lineHeight: hp(3),
   },
   modalOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   alertContainer: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: wp('5%'),
-    borderTopRightRadius: wp('5%'),
-    padding: wp('5%'),
-    paddingBottom: hp('3%'),
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: wp(8),
+    borderTopRightRadius: wp(8),
+    padding: wp(6),
     alignItems: 'center',
   },
-  alertIcon: {
-    width: wp('15%'),
-    height: wp('15%'),
-    marginBottom: hp('2%'),
-  },
-  alertContent: {
-    marginBottom: hp('5%'),
+  alertIconContainer: {
+    width: wp(20),
+    height: wp(20),
+    borderRadius: wp(10),
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: hp(2),
   },
   alertTitle: {
-    fontSize: wp('6%'),
+    fontSize: wp(6),
     fontWeight: 'bold',
-    color: '#000',
-    marginBottom: hp('1%'),
-    textAlign: 'center',
+    color: '#082953',
+    marginBottom: hp(1),
   },
   alertText: {
-    fontSize: wp('4%'),
-    color: '#9FA4AA',
+    fontSize: wp(4),
+    color: '#666',
     textAlign: 'center',
-    marginBottom: hp('2%'),
-    lineHeight: hp('2.5%'),
+    marginBottom: hp(3),
+    lineHeight: hp(3),
   },
-  alertButton1: {
-    backgroundColor: '#134482',
-    paddingVertical: hp('2%'),
-    borderRadius: wp('3%'),
-    width: wp('80%'),
-    alignItems: 'center',
-    marginBottom: hp('2%'),
-  },
-  alertButtonText1: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: wp('5%'),
+  alertButtons: {
+    width: '100%',
   },
   alertButton: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#fff',
-    paddingVertical: hp('1.5%'),
-    borderRadius: wp('3%'),
-    width: wp('60%'),
+    borderRadius: wp(3),
+    padding: hp(1.5),
     alignItems: 'center',
+    marginBottom: hp(1.5),
   },
   alertButtonText: {
-    color: '#134482',
+    color: '#FFF',
     fontWeight: 'bold',
-    fontSize: wp('4%'),
+    fontSize: wp(4.5),
+  },
+  alertSecondaryButton: {
+    borderRadius: wp(3),
+    padding: hp(1.5),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#8B0000',
   },
 });
 
