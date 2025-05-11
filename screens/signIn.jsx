@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import Api_login_register from '../api_login_register';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { KeyboardAvoidingView } from 'react-native';
 import { jwtDecode } from 'jwt-decode';
 
 import { useNavigation } from '@react-navigation/native';
@@ -49,6 +50,12 @@ const SignINScreen = () => {
   };
 
   return (
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+>
+ 
     <View style={styles.container}>
       <View style={styles.logoContainer}>
         <Image source={require('../assets/Los_Pollos_Hermanos_logo.png')} style={styles.logo} />
@@ -81,6 +88,7 @@ const SignINScreen = () => {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardAvoidingView>
   );
 };
 

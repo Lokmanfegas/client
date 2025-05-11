@@ -12,7 +12,8 @@ import {
   Dimensions,
   FlatList,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { FontAwesome, MaterialIcons, MaterialCommunityIcons , Ionicons } from '@expo/vector-icons';
@@ -56,8 +57,6 @@ const HomeScreen = () => {
 
   const navigation = useNavigation();
 
-
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -77,51 +76,44 @@ const HomeScreen = () => {
     loadData();
   }, []);
 
-
-  useEffect(  () => {
-    const fechnotif = async()=>{
+  useEffect(() => {
+    const fechnotif = async() => {
       if (!clientId) return;
   
-    const q = query(
-      collection(db, 'client_rating_notifications'),
-      where('id_client', '==', clientId),
-      where('isRead', '==', false),
-      where('status', '==', 'sent')
-   
-    );
-    const querySnapshot = await getDocs(q);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+      const q = query(
+        collection(db, 'client_rating_notifications'),
+        where('id_client', '==', clientId),
+        where('isRead', '==', false),
+        where('status', '==', 'sent')
+      );
+      const querySnapshot = await getDocs(q);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    const notificationsData = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      const createdAt = data.createdAt?.toDate?.() || null;
-      return {
-        id: doc.id,
-        ...data,
-        createdAt,
-      };
-    }).filter(order => {
-      const orderDate = order.createdAt;
-      return orderDate && orderDate >= today;
-    });
+      const notificationsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate?.() || null;
+        return {
+          id: doc.id,
+          ...data,
+          createdAt,
+        };
+      }).filter(order => {
+        const orderDate = order.createdAt;
+        return orderDate && orderDate >= today;
+      });
 
-     setNotificationCount(notificationsData.length);
-
+      setNotificationCount(notificationsData.length);
     }
+    
     fechnotif();
     const intervalId = setInterval(() => {
       fechnotif();
     }, 10000);
   
     return () => clearInterval(intervalId);
-        
-
   }, [clientId]);
 
- 
-
-console.log(notificationCount);
   useEffect(() => {
     if (bookingModalVisible) {
       fetchTables();
@@ -135,9 +127,6 @@ console.log(notificationCount);
     }
   }, [startDate, endDate, reservations]);
 
-
-
-
   const handleCallWaiter = async () => {
     if (!tableNumber) {
       setCallWaiterError("Veuillez entrer le numéro de table");
@@ -145,17 +134,14 @@ console.log(notificationCount);
     }
   
     try {
-    
       setCallWaiterLoading(true);
       setCallWaiterError("");
       
       const response = await Api_commande.callWaiter(clientId, tableNumber);
      
-      
-        alert("Serveur appelé avec succès!");
-        setCallWaiterModalVisible(false);
-        setTableNumber("");
-      
+      alert("Serveur appelé avec succès!");
+      setCallWaiterModalVisible(false);
+      setTableNumber("");
     } catch (error) {
       console.error("Error calling waiter:", error);
       setCallWaiterError(error.message || "Erreur lors de l'appel du serveur");
@@ -163,8 +149,6 @@ console.log(notificationCount);
       setCallWaiterLoading(false);
     }
   };
-
-
 
   const fetchRecommendedPlats = async (clientId) => {
     try {
@@ -250,7 +234,10 @@ console.log(notificationCount);
   };
 
   const handleStartDateChange = (event, selectedDate) => {
-    setShowStartDatePicker(false);
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+    }
+    
     if (selectedDate) {
       const now = new Date();
       const minDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
@@ -269,7 +256,10 @@ console.log(notificationCount);
   };
 
   const handleEndDateChange = (event, selectedDate) => {
-    setShowEndDatePicker(false);
+    if (Platform.OS === 'android') {
+      setShowEndDatePicker(false);
+    }
+    
     if (selectedDate) {
       if (selectedDate <= startDate) {
         setDateError(true);
@@ -416,52 +406,52 @@ console.log(notificationCount);
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-  <Text style={styles.headerText}>Home</Text>
-  <View style={{ flexDirection: "row", alignItems: "center" }}>
-    <TouchableOpacity 
-      onPress={() => navigation.navigate('Notification')}
-      style={{ marginRight: 15, position: 'relative' }}
-    >
-      <MaterialCommunityIcons name="bell" size={wp(7)} color="#8B0000" />
-      {notificationCount > 0 && (
-        <Badge
-          value={notificationCount}
-          status="error"
-          containerStyle={{ position: 'absolute', top: -5, right: -5 }}
-        />
-      )}
-    </TouchableOpacity>
-    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-      <MaterialCommunityIcons name="account-circle" size={wp(10)} color="#8B0000" />
-    </TouchableOpacity>
-  </View>
-</View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={styles.headerText}>Home</Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Notification')}
+                style={{ marginRight: 15, position: 'relative' }}
+              >
+                <MaterialCommunityIcons name="bell" size={wp(7)} color="#8B0000" />
+                {notificationCount > 0 && (
+                  <Badge
+                    value={notificationCount}
+                    status="error"
+                    containerStyle={{ position: 'absolute', top: -5, right: -5 }}
+                  />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                <MaterialCommunityIcons name="account-circle" size={wp(10)} color="#8B0000" />
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <View style={styles.searchRow}>
-  <View style={styles.searchContainer}>
-    <FontAwesome name="search" size={wp(5)} color="#888" />
-    <TextInput 
-      style={styles.searchInput} 
-      placeholder="Search" 
-      placeholderTextColor="#888" 
-    />
-  </View>
-  <View style={styles.iconsContainer}>
-    <TouchableOpacity 
-      style={styles.iconButton}
-      onPress={() => navigation.navigate('Game')}
-    >
-      <Ionicons name="game-controller" size={wp(6)} color="#8B0000" />
-    </TouchableOpacity>
-    <TouchableOpacity 
-      style={styles.iconButton}
-      onPress={() => navigation.navigate('Mycart')}
-    >
-      <FontAwesome name="shopping-cart" size={wp(6)} color="#8B0000" />
-    </TouchableOpacity>
-  </View>
-</View>
+            <View style={styles.searchContainer}>
+              <FontAwesome name="search" size={wp(5)} color="#888" />
+              <TextInput 
+                style={styles.searchInput} 
+                placeholder="Search" 
+                placeholderTextColor="#888" 
+              />
+            </View>
+            <View style={styles.iconsContainer}>
+              <TouchableOpacity 
+                style={styles.iconButton}
+                onPress={() => navigation.navigate('Game')}
+              >
+                <Ionicons name="game-controller" size={wp(6)} color="#8B0000" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.iconButton}
+                onPress={() => navigation.navigate('Mycart')}
+              >
+                <FontAwesome name="shopping-cart" size={wp(6)} color="#8B0000" />
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Promo Banner */}
           <TouchableOpacity style={styles.promoBanner}>
@@ -509,12 +499,12 @@ console.log(notificationCount);
               style={styles.waiterImage}
             />
             <TouchableOpacity 
-            style={styles.callButton}
-            onPress={() => setCallWaiterModalVisible(true)}
-          >
-            <Text style={styles.callButtonText}>Call waiter</Text>
-            <MaterialIcons name="arrow-forward" size={wp(4)} color="#fff" />
-          </TouchableOpacity>
+              style={styles.callButton}
+              onPress={() => setCallWaiterModalVisible(true)}
+            >
+              <Text style={styles.callButtonText}>Call waiter</Text>
+              <MaterialIcons name="arrow-forward" size={wp(4)} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -542,7 +532,7 @@ console.log(notificationCount);
             </View>
 
             <ScrollView style={styles.modalBody}>
-            <Text style={styles.sectionLabel}>Start date & Time</Text>
+              <Text style={styles.sectionLabel}>Start date & Time</Text>
               <TouchableOpacity 
                 style={[styles.dateInput, dateError && !startDate && styles.inputError]}
                 onPress={() => setShowStartDatePicker(true)}
@@ -574,7 +564,7 @@ console.log(notificationCount);
                 />
               )}
 
-<Text style={styles.sectionLabel}>Number of people</Text>
+              <Text style={styles.sectionLabel}>Number of people</Text>
               <TextInput
                 style={styles.dateInput}
                 placeholder="1"
@@ -603,9 +593,6 @@ console.log(notificationCount);
               <View style={styles.tablesGrid}>
                 {tables.map((table) => renderTableItem(table))}
               </View>
-
-            
-
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -631,61 +618,61 @@ console.log(notificationCount);
         </View>
       </Modal>
   
-<Modal
-  animationType="none"
-  transparent={true}
-  visible={callWaiterModalVisible}
-  onRequestClose={() => setCallWaiterModalVisible(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      <View style={styles.modalHeader}>
-        <View>
-          <Text style={styles.modalTitle}>Call Waiter</Text>
-          <Text style={styles.modalSubtitle}>Request assistance</Text>
+      <Modal
+        animationType="none"
+        transparent={true}
+        visible={callWaiterModalVisible}
+        onRequestClose={() => setCallWaiterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Call Waiter</Text>
+                <Text style={styles.modalSubtitle}>Request assistance</Text>
+              </View>
+              <TouchableOpacity onPress={() => setCallWaiterModalVisible(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.sectionLabel_waiter}>Table Number</Text>
+              <TextInput
+                style={[styles.dateInput, callWaiterError && styles.inputError]}
+                placeholder="Enter your table number"
+                value={tableNumber}
+                onChangeText={setTableNumber}
+                keyboardType="numeric"
+              />
+              
+              {callWaiterError && (
+                <Text style={styles.errorText}>{callWaiterError}</Text>
+              )}
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => setCallWaiterModalVisible(false)}
+                disabled={callWaiterLoading}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.doneButton_waiter, callWaiterLoading && styles.disabledButton]} 
+                onPress={handleCallWaiter}
+                disabled={callWaiterLoading}
+              >
+                <Text style={styles.doneButtonText}>
+                  {callWaiterLoading ? "Calling..." : "Call Waiter"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-        <TouchableOpacity onPress={() => setCallWaiterModalVisible(false)}>
-          <Text style={styles.closeButton}>✕</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.modalBody}>
-        <Text style={styles.sectionLabel_waiter}>Table Number</Text>
-        <TextInput
-          style={[styles.dateInput, callWaiterError && styles.inputError]}
-          placeholder="Enter your table number"
-          value={tableNumber}
-          onChangeText={setTableNumber}
-          keyboardType="numeric"
-        />
-        
-        {callWaiterError && (
-          <Text style={styles.errorText}>{callWaiterError}</Text>
-        )}
-      </View>
-
-      <View style={styles.modalFooter}>
-        <TouchableOpacity 
-          style={styles.cancelButton} 
-          onPress={() => setCallWaiterModalVisible(false)}
-          disabled={callWaiterLoading}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.doneButton_waiter, callWaiterLoading && styles.disabledButton]} 
-          onPress={handleCallWaiter}
-          disabled={callWaiterLoading}
-        >
-          <Text style={styles.doneButtonText}>
-            {callWaiterLoading ? "Calling..." : "Call Waiter"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+      </Modal>
     </View>
   );
 }
@@ -994,6 +981,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(5),
     borderRadius: wp(2),
   },
+  
   cancelButtonText: {
     fontSize: wp(4),
     color: "#000",
