@@ -234,10 +234,12 @@ const HomeScreen = () => {
   };
 
   const handleStartDateChange = (event, selectedDate) => {
+    // Fermer le picker sur Android
     if (Platform.OS === 'android') {
       setShowStartDatePicker(false);
     }
     
+    // Si l'utilisateur a sélectionné une date (pas annulé)
     if (selectedDate) {
       const now = new Date();
       const minDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
@@ -256,10 +258,12 @@ const HomeScreen = () => {
   };
 
   const handleEndDateChange = (event, selectedDate) => {
+    // Fermer le picker sur Android
     if (Platform.OS === 'android') {
       setShowEndDatePicker(false);
     }
     
+    // Si l'utilisateur a sélectionné une date (pas annulé)
     if (selectedDate) {
       if (selectedDate <= startDate) {
         setDateError(true);
@@ -531,36 +535,52 @@ const HomeScreen = () => {
               </TouchableOpacity>
             </View>
 
+            
             <ScrollView style={styles.modalBody}>
               <Text style={styles.sectionLabel}>Start date & Time</Text>
               <TouchableOpacity 
                 style={[styles.dateInput, dateError && !startDate && styles.inputError]}
-                onPress={() => setShowStartDatePicker(true)}
+                onPress={() => {
+                  if (Platform.OS === 'android') {
+                    setShowStartDatePicker(true);
+                  } else {
+                    // Pour iOS, vous pourriez vouloir utiliser un autre approche
+                    setShowStartDatePicker(true);
+                  }
+                }}
               >
                 <Text>{formatDateTime(startDate)}</Text>
               </TouchableOpacity>
-              {showStartDatePicker && (
+              {(showStartDatePicker || Platform.OS === 'android') && (
                 <DateTimePicker
                   value={startDate}
                   mode="datetime"
                   minimumDate={new Date(new Date().getTime() + 3 * 60 * 60 * 1000)}
                   onChange={handleStartDateChange}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 />
               )}
 
               <Text style={styles.sectionLabel}>End date & Time</Text>
               <TouchableOpacity 
                 style={[styles.dateInput, dateError && !endDate && styles.inputError]}
-                onPress={() => setShowEndDatePicker(true)}
+                onPress={() => {
+                  if (Platform.OS === 'android') {
+                    setShowEndDatePicker(true);
+                  } else {
+                    setShowEndDatePicker(true);
+                  }
+                }}
               >
                 <Text>{formatDateTime(endDate)}</Text>
               </TouchableOpacity>
-              {showEndDatePicker && (
+              {(showEndDatePicker || Platform.OS === 'android') && (
                 <DateTimePicker
                   value={endDate}
                   mode="datetime"
                   minimumDate={new Date(startDate.getTime() + 60 * 60 * 1000)}
                   onChange={handleEndDateChange}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 />
               )}
 
