@@ -114,18 +114,18 @@ const MenuScreen = () => {
     }
   };
 
-  // Fonction pour afficher les boutons de pagination de manière optimisée
+ 
   const renderPageNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 5; // Nombre maximum de pages visibles à la fois
+    const maxVisiblePages = 5; 
 
     if (totalPages <= maxVisiblePages) {
-      // Afficher toutes les pages
+
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Afficher avec des ellipses (...)
+   
       if (currentPage <= 3) {
         // Premières pages
         for (let i = 1; i <= 4; i++) {
@@ -134,14 +134,14 @@ const MenuScreen = () => {
         pages.push('...');
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
-        // Dernières pages
+
         pages.push(1);
         pages.push('...');
         for (let i = totalPages - 3; i <= totalPages; i++) {
           pages.push(i);
         }
       } else {
-        // Pages au milieu
+
         pages.push(1);
         pages.push('...');
         pages.push(currentPage - 1);
@@ -212,7 +212,6 @@ const MenuScreen = () => {
         </View>
       </View>
 
-      {/* Category Filters */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false} 
@@ -365,15 +364,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: wp(4),
     paddingHorizontal: wp(2),
-    paddingTop: wp(2),
-    paddingBottom: wp(3), // Plus d'espace en bas
+    //paddingTop: wp(2),
+    paddingBottom: wp(3),
+    // Plus d'espace en bas
     minWidth: wp(20),
  // Ajoutez cette ligne
   },
   categoryButtonActive: {
     borderBottomWidth: 2,
     borderBottomColor: '#8B0000',
-    marginBottom: -8, // Compensation parfaite
+    marginBottom: -8,
+    paddingBottom: wp(5), // Compensation parfaite
   },
   categoryText: {
     fontFamily: 'SFProDisplay-Medium',

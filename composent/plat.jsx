@@ -7,9 +7,14 @@ import Api_plat_pref from "../api_pla_pref";
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Fonctions de calcul responsive basées sur la largeur et hauteur de l'écran
 const { width, height } = Dimensions.get('window');
-const wp = (size) => (width / 100) * size;
-const hp = (size) => (height / 100) * size;
+const guidelineBaseWidth = 375;
+const guidelineBaseHeight = 812;
+
+const scale = (size) => (width / guidelineBaseWidth) * size;
+const verticalScale = (size) => (height / guidelineBaseHeight) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
 
 export default function Plat({ item }) {
     const navigation = useNavigation();
@@ -120,7 +125,7 @@ export default function Plat({ item }) {
                 >
                     <FontAwesome
                         name={isFavorite ? 'heart' : 'heart-o'}
-                        size={wp(4.5)}
+                        size={moderateScale(18)}
                         color={isFavorite ? '#FF3B30' : '#FFF'}
                         style={{ textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
                     />
@@ -129,7 +134,7 @@ export default function Plat({ item }) {
                 <View style={[styles.imageContainer, { backgroundColor: getCategoryColor() + '20' }]}>
                     <MaterialCommunityIcons 
                         name={getCategoryIcon()} 
-                        size={wp(20)} 
+                        size={moderateScale(80)} 
                         color={getCategoryColor()} 
                     />
                 </View>
@@ -138,7 +143,7 @@ export default function Plat({ item }) {
                     <View style={styles.newBadge}>
                         <MaterialCommunityIcons 
                             name="lightning-bolt" 
-                            size={wp(3.5)} 
+                            size={moderateScale(14)} 
                             color="#FFD747" 
                         />
                         <Text style={styles.newBadgeText}>NEW</Text>
@@ -147,7 +152,7 @@ export default function Plat({ item }) {
                     <View style={styles.ratingBadge}>
                         <FontAwesome 
                             name="star" 
-                            size={wp(3.5)} 
+                            size={moderateScale(14)} 
                             color="#FFC107" 
                         />
                         <Text style={styles.ratingText}>{item.note_plat}</Text>
@@ -167,7 +172,7 @@ export default function Plat({ item }) {
                         style={[styles.addButton, { backgroundColor: getCategoryColor() }]}
                         onPress={() => navigation.navigate("Description", { item })}
                     >
-                        <FontAwesome name="plus" size={wp(4)} color="#fff" />
+                        <FontAwesome name="plus" size={moderateScale(16)} color="#fff" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -177,15 +182,15 @@ export default function Plat({ item }) {
 
 const styles = StyleSheet.create({
     container: {
-        width: wp(42),
-        marginRight: wp(4),
-        marginBottom: hp(2),
-        height: hp(32) 
+        width: moderateScale(160),
+        marginRight: moderateScale(15),
+        marginBottom: verticalScale(15),
+        height: verticalScale(260),
     },
     card: {
         backgroundColor: '#fff',
-        borderRadius: wp(4),
-        padding: wp(3.5),
+        borderRadius: moderateScale(15),
+        padding: moderateScale(14),
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -204,72 +209,72 @@ const styles = StyleSheet.create({
     },
     favoriteButton: {
         position: 'absolute',
-        top: wp(3),
-        right: wp(3),
+        top: moderateScale(12),
+        right: moderateScale(12),
         zIndex: 2,
         backgroundColor: 'rgba(0,0,0,0.1)',
-        borderRadius: wp(5),
-        padding: wp(2),
-        width: wp(10),
-        height: wp(10),
+        borderRadius: moderateScale(20),
+        padding: moderateScale(8),
+        width: moderateScale(40),
+        height: moderateScale(40),
         justifyContent: 'center',
         alignItems: 'center'
     },
     imageContainer: {
         width: '100%',
-        height: hp(12),
+        height: verticalScale(100),
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: hp(1),
-        borderRadius: wp(3),
+        marginBottom: verticalScale(8),
+        borderRadius: moderateScale(12),
     },
     badgeContainer: {
         flexDirection: 'row',
         width: '100%',
         justifyContent: 'space-between',
-        marginBottom: hp(1)
+        marginBottom: verticalScale(8)
     },
     newBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#B02522',
-        borderRadius: wp(5),
-        paddingHorizontal: wp(2.5),
-        paddingVertical: hp(0.5)
+        borderRadius: moderateScale(20),
+        paddingHorizontal: moderateScale(10),
+        paddingVertical: verticalScale(4)
     },
     newBadgeText: {
         color: '#FFD747',
-        fontSize: wp(3.2),
+        fontSize: moderateScale(13),
         fontWeight: '600',
-        marginLeft: wp(1)
+        marginLeft: moderateScale(4)
     },
     ratingBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#FFE9B2',
-        borderRadius: wp(5),
-        paddingHorizontal: wp(2.5),
-        paddingVertical: hp(0.5)
+        borderRadius: moderateScale(20),
+        paddingHorizontal: moderateScale(10),
+        paddingVertical: verticalScale(4)
     },
     ratingText: {
         color: '#FFC107',
-        fontSize: wp(3.2),
+        fontSize: moderateScale(13),
         fontWeight: '600',
-        marginLeft: wp(1)
+        marginLeft: moderateScale(4)
     },
     name: {
         color: '#082953',
-        fontSize: wp(4),
+        fontSize: moderateScale(16),
         fontWeight: '700',
         textAlign: 'center',
-        marginBottom: hp(0.5),
+        marginBottom: verticalScale(4),
         width: '100%'
     },
     description: {
         color: '#666',
-        fontSize: wp(3.2),
+        fontSize: moderateScale(13),
         textAlign: 'center',
-        marginBottom: hp(1),
+        marginBottom: verticalScale(8),
         width: '100%'
     },
     footer: {
@@ -280,18 +285,18 @@ const styles = StyleSheet.create({
         marginTop: 'auto'
     },
     price: {
-        fontSize: wp(4.2),
+        fontSize: moderateScale(17),
         fontWeight: '700',
         color: '#8B0000'
     },
     calories: {
-        fontSize: wp(2.8),
+        fontSize: moderateScale(11),
         color: '#888'
     },
     addButton: {
-        borderRadius: wp(3),
-        width: wp(9),
-        height: wp(9),
+        borderRadius: moderateScale(12),
+        width: moderateScale(36),
+        height: moderateScale(36),
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
